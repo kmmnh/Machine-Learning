@@ -1,0 +1,135 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "K. Maxwell"
+date: "May 6, 2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is the course project for Practical Machine Learning. Devices such as Jawbone Up, Fitbit, and Nike FuelBand are now making it possible to easily track and obtain personal data on self movement. While it is easily able to obtain data on the quantity of activities performed it is rarely quantified how well the activity is performed. 
+The goal of this project is the use data from accelerometers on the belt, forearm, arm, and dumbell of six participants who have been asked to perform barebell lifts correctly and incorrectly five different ways.
+
+## Running Necessary Packages  
+```{r}
+library(e1071)
+library(caret)
+library(rpart)
+library(rattle)
+library(randomForest)
+library(knitr)
+
+```
+
+## Loading the Data
+The training and testing datasets are found at the following urls. The data is titled Assignment_Training and Assignment_Testing
+```{r}
+train_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+test_url  <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+Assignment_Training <- read.csv(url(train_url))
+Assignment_Testing <- read.csv(url(test_url))
+colnames(Assignment_Training)
+dim(Assignment_Training)
+dim(Assignment_Testing)
+```
+## Data Preperation and Cleaning
+Some necessary data preparation is required to clean the data and get it ready for use in the models. The first step is to remove the NAs. The second step is to remove the first 7 varaiables as they will provide no additional value to the modoels.
+
+```{r}
+# Data prep: remove NAs
+nas <- sapply(Assignment_Training, function(x) mean(is.na(x))) > 0.95
+Assignment_Training <- Assignment_Training[,nas == FALSE]
+Assignment_Testing <- Assignment_Testing[,nas == FALSE]
+dim(Assignment_Training)
+```
+
+```{r}
+# Remove columns 1-7
+Assignment_Training <- Assignment_Training[,-c(1:7)]
+Assignment_Testing <- Assignment_Testing [,-c(1:7)]
+dim(Assignment_Training)
+```
+
+
+
+## Partitioning the Data into Training and Cross-validation Sets
+The training dataset is then partitioned (70%/30%) to create a training dataset and a cross-validation dataset.
+```{r}
+intrain = createDataPartition(Assignment_Training$classe, p=0.70, list = FALSE)
+Training_final = Assignment_Training[intrain,]
+Testing_final  = Assignment_Training[-intrain,]
+
+colnames(Training_final)
+
+dim(Training_final)
+dim(Testing_final)
+```
+## Remove Near Zero Variance
+The next step is to remove any variable with near zero variance. These variables have extremely low variances and as a result have very little information because they mostly consist of a single value (e.g. zero).
+
+```{r}
+ NZV <- nearZeroVar(Training_final)
+    Training_final <- Training_final[, -NZV]
+  Testing_final  <- Testing_final[, -NZV]
+  dim(Training_final)
+```
+
+
+##Model Building
+
+For this course project two different models are employed: Decision Tree and Random Forest. Evaluation will be done to determine the model with best accuracy. That model will then be used to detect the correction answers to the course project quiz.
+
+  
+## Predicting with a Decision Tree
+
+```{r}
+set.seed((12345))
+modelDT <- rpart(classe ~., data = Training_final, method = "class")
+
+fancyRpartPlot(modelDT)
+```
+
+#```{r}
+#predictDT <- predict(modelDT, Testing_final, type = "class")
+
+#CMDT <- confusionMatrix(factor(predictDT), Testing_final$classe)
+#CMDT
+#```
+
+## Random Forest
+```{r}
+set.seed(12345)
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modelRandomForest <- train(classe ~., method='rf', data = Training_final, trControl=controlRF)
+modelRandomForest$finalModel
+```
+
+
+
+#```{r}
+#predictRM <- predict(modelRandomForest, newdata = Testing_final)
+#CMRF <-  confusionMatrix(predictRM, Testing_final$classe)
+#CMRF
+#```
+
+## Selecting the Best Model
+
+The next step is to select the best model based on accuracy:
+Decision Tree: 74% Accuracy
+Random Forest: 99% Accuracy
+
+The model with the best accuracy is the Random Forest model and that will be used to determine the answers to the final quiz.
+
+```{r}
+BestModel <- predict(modelRandomForest, newdata = Assignment_Testing)
+BestModel
+```
