@@ -1,1 +1,1 @@
-# Machine-Learning. This repository is created to house the Marchine Learning Course Project
+# Machine-Learning. This repository is created to house the Machine Learning Course Project files
